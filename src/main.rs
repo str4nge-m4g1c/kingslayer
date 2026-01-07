@@ -29,6 +29,7 @@ struct App {
     show_help: bool,
     log_scroll_offset: usize,
     guide_scroll_offset: usize,
+    help_scroll_offset: usize,
 }
 
 impl App {
@@ -40,6 +41,7 @@ impl App {
             show_help: false,
             log_scroll_offset: 0,
             guide_scroll_offset: 0,
+            help_scroll_offset: 0,
         }
     }
 
@@ -76,12 +78,26 @@ impl App {
         }
     }
 
+    fn scroll_help_up(&mut self) {
+        if self.help_scroll_offset > 0 {
+            self.help_scroll_offset -= 1;
+        }
+    }
+
+    fn scroll_help_down(&mut self, max_lines: usize) {
+        let max_scroll = max_lines.saturating_sub(10);
+        if self.help_scroll_offset < max_scroll {
+            self.help_scroll_offset += 1;
+        }
+    }
+
     fn restart_game(&mut self) {
         self.game = Game::new_solo();
         self.selected_cards.clear();
         self.state = AppState::Playing;
         self.log_scroll_offset = 0;
         self.guide_scroll_offset = 0;
+        self.help_scroll_offset = 0;
     }
 
     fn toggle_card_selection(&mut self, index: usize) {
@@ -267,7 +283,7 @@ fn run_app<B: ratatui::backend::Backend>(
     loop {
         terminal.draw(|f| {
             if app.show_help {
-                ui::render_help(f);
+                ui::render_help(f, app.help_scroll_offset);
                 return;
             }
 
@@ -292,23 +308,40 @@ fn run_app<B: ratatui::backend::Backend>(
                 KeyCode::Char('q') => return Ok(()),
                 KeyCode::Char('h') => {
                     app.show_help = !app.show_help;
+                    // Reset help scroll when closing
+                    if !app.show_help {
+                        app.help_scroll_offset = 0;
+                    }
                     continue;
                 }
                 KeyCode::Up => {
-                    app.scroll_log_up();
+                    if app.show_help {
+                        app.scroll_help_up();
+                    } else {
+                        app.scroll_log_up();
+                    }
                     continue;
                 }
                 KeyCode::Down => {
-                    app.scroll_log_down();
+                    if app.show_help {
+                        let help_line_count = ui::get_help_line_count();
+                        app.scroll_help_down(help_line_count);
+                    } else {
+                        app.scroll_log_down();
+                    }
                     continue;
                 }
                 KeyCode::Left => {
-                    app.scroll_guide_up();
+                    if !app.show_help {
+                        app.scroll_guide_up();
+                    }
                     continue;
                 }
                 KeyCode::Right => {
-                    let guide_line_count = ui::get_game_guide_line_count();
-                    app.scroll_guide_down(guide_line_count);
+                    if !app.show_help {
+                        let guide_line_count = ui::get_game_guide_line_count();
+                        app.scroll_guide_down(guide_line_count);
+                    }
                     continue;
                 }
                 _ => {}

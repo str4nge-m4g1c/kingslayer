@@ -5,7 +5,7 @@ use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span, Text},
-    widgets::{Block, Borders, List, ListItem, Paragraph, Wrap},
+    widgets::{Block, Borders, List, ListItem, Paragraph},
     Frame,
 };
 
@@ -500,35 +500,288 @@ fn render_card_small(card: &Card) -> Vec<String> {
     ]
 }
 
-/// Render help overlay
-pub fn render_help(f: &mut Frame) {
+/// Render help overlay (scrollable)
+pub fn render_help(f: &mut Frame, scroll_offset: usize) {
     let block = Block::default()
-        .title("Help")
+        .title("📖 Complete Game Guide (↑↓ to scroll, h to close) 📖")
         .borders(Borders::ALL)
         .border_style(Style::default().fg(Color::Yellow));
 
-    let text = Text::from(vec![
-        Line::from("Controls:"),
+    // Build comprehensive help content
+    let all_lines = vec![
+        Line::from(Span::styled(
+            "CONTROLS:",
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
+        )),
         Line::from("  1-8: Toggle card selection"),
         Line::from("  Enter: Play selected cards"),
         Line::from("  Space: Yield turn"),
-        Line::from("  j: Use Jester power (solo mode)"),
-        Line::from("  h: Toggle help"),
-        Line::from("  q: Quit"),
+        Line::from("  j: Use Jester power (solo mode only)"),
+        Line::from("  ↑/↓: Scroll game log (or this help)"),
+        Line::from("  ←/→: Scroll game guide"),
+        Line::from("  r: Restart game"),
+        Line::from("  h: Toggle help overlay"),
+        Line::from("  q: Quit game"),
         Line::from(""),
-        Line::from("Game Rules:"),
-        Line::from("  ♥ Hearts: Heal discard into deck"),
-        Line::from("  ♦ Diamonds: Draw cards"),
-        Line::from("  ♣ Clubs: Double damage"),
-        Line::from("  ♠ Spades: Shield against attack"),
+        Line::from(Span::styled(
+            "GAME OBJECTIVE:",
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
+        )),
+        Line::from("  Defeat all 12 enemies (4 Jacks, 4 Queens, 4 Kings)"),
+        Line::from("  to win the game!"),
         Line::from(""),
-        Line::from("Press 'h' to close help"),
-    ]);
+        Line::from(Span::styled(
+            "TURN STRUCTURE:",
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
+        )),
+        Line::from("  1. INPUT: Play card(s) or yield"),
+        Line::from("  2. RESOLUTION: Apply damage and suit powers"),
+        Line::from("  3. VICTORY/DEFEAT: Check if enemy is defeated"),
+        Line::from("  4. ENEMY ATTACK: Discard cards to survive"),
+        Line::from(""),
+        Line::from(Span::styled(
+            "SUIT POWERS:",
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        )),
+        Line::from(Span::styled(
+            "♥ Hearts - Heal:",
+            Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
+        )),
+        Line::from("  Shuffle discard pile and move N cards from"),
+        Line::from("  discard to bottom of tavern deck (N = attack value)"),
+        Line::from("  CRITICAL: Hearts always resolves before Diamonds!"),
+        Line::from(""),
+        Line::from(Span::styled(
+            "♦ Diamonds - Draw:",
+            Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
+        )),
+        Line::from("  Draw N cards from tavern deck (N = attack value)"),
+        Line::from("  In multiplayer: Cards distributed among players"),
+        Line::from(""),
+        Line::from(Span::styled(
+            "♣ Clubs - Double Damage:",
+            Style::default()
+                .fg(Color::White)
+                .add_modifier(Modifier::BOLD),
+        )),
+        Line::from("  Attack value counts ×2 against enemy HP"),
+        Line::from("  NOTE: If played before Jester against Clubs enemy,"),
+        Line::from("        does NOT count double retroactively"),
+        Line::from(""),
+        Line::from(Span::styled(
+            "♠ Spades - Shield:",
+            Style::default()
+                .fg(Color::White)
+                .add_modifier(Modifier::BOLD),
+        )),
+        Line::from("  Reduce enemy attack by N (N = attack value)"),
+        Line::from("  Shield effects are CUMULATIVE and PERSISTENT"),
+        Line::from("  until the enemy is defeated"),
+        Line::from("  NOTE: If played before Jester against Spades enemy,"),
+        Line::from("        shields apply retroactively after Jester"),
+        Line::from(""),
+        Line::from(Span::styled(
+            "SPECIAL CARDS:",
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        )),
+        Line::from(Span::styled(
+            "Ace (Animal Companion):",
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
+        )),
+        Line::from("  Value: 1"),
+        Line::from("  Can pair with any other card (except Jester)"),
+        Line::from("  Combines values and activates both suits"),
+        Line::from("  Example: Ace of Hearts + 5 of Diamonds = 6 damage,"),
+        Line::from("           heal 1, draw 5"),
+        Line::from(""),
+        Line::from(Span::styled(
+            "Jester:",
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
+        )),
+        Line::from("  Value: 0"),
+        Line::from("  Cancels enemy immunity to suit powers"),
+        Line::from("  Skips enemy attack phase (you take no damage!)"),
+        Line::from("  Must be played alone (no combos)"),
+        Line::from("  Solo mode special: Discard hand, draw 8 cards (j key)"),
+        Line::from("  Can activate at start of Step 1 or Step 4"),
+        Line::from(""),
+        Line::from(Span::styled(
+            "COMBO RULES:",
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        )),
+        Line::from("  Single card: Always valid"),
+        Line::from("  Ace + any card: Valid (combines values & suits)"),
+        Line::from("  2-4 cards same rank: Valid if total value ≤ 10"),
+        Line::from("  Examples:"),
+        Line::from("    - Four 2s = 8 total (valid)"),
+        Line::from("    - Three 3s = 9 total (valid)"),
+        Line::from("    - Two 6s = 12 total (INVALID - exceeds 10)"),
+        Line::from(""),
+        Line::from(Span::styled(
+            "ENEMY STATS:",
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        )),
+        Line::from("  Jack:  20 HP, 10 Attack"),
+        Line::from("  Queen: 30 HP, 15 Attack"),
+        Line::from("  King:  40 HP, 20 Attack"),
+        Line::from(""),
+        Line::from(Span::styled(
+            "ENEMY IMMUNITY:",
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        )),
+        Line::from("  Each enemy is IMMUNE to suit powers (NOT damage)"),
+        Line::from("  matching their suit"),
+        Line::from("  Jester cancels this immunity"),
+        Line::from("  Damage always applies regardless of immunity!"),
+        Line::from(""),
+        Line::from(Span::styled(
+            "CRITICAL GAME RULES:",
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        )),
+        Line::from(Span::styled(
+            "Exact Damage Victory:",
+            Style::default()
+                .fg(Color::Green)
+                .add_modifier(Modifier::BOLD),
+        )),
+        Line::from("  If damage EXACTLY equals enemy HP, enemy is captured"),
+        Line::from("  (placed face-down on top of tavern deck)"),
+        Line::from("  Otherwise, enemy goes to discard pile"),
+        Line::from(""),
+        Line::from(Span::styled(
+            "Defeated Enemy Cards:",
+            Style::default()
+                .fg(Color::Green)
+                .add_modifier(Modifier::BOLD),
+        )),
+        Line::from("  When drawn or played/discarded:"),
+        Line::from("    - Jacks = 10 value"),
+        Line::from("    - Queens = 15 value"),
+        Line::from("    - Kings = 20 value"),
+        Line::from(""),
+        Line::from(Span::styled(
+            "Yielding:",
+            Style::default()
+                .fg(Color::Green)
+                .add_modifier(Modifier::BOLD),
+        )),
+        Line::from("  Skip to Step 4 (enemy attack phase)"),
+        Line::from("  CANNOT yield if all other players yielded on"),
+        Line::from("  their last turn (multiplayer)"),
+        Line::from(""),
+        Line::from(Span::styled(
+            "VICTORY CONDITIONS:",
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        )),
+        Line::from("  Defeat all 12 enemies (4 Jacks, 4 Queens, 4 Kings)"),
+        Line::from(""),
+        Line::from(Span::styled(
+            "Solo Victory Grades:",
+            Style::default()
+                .fg(Color::Green)
+                .add_modifier(Modifier::BOLD),
+        )),
+        Line::from("  Gold Victory: 0 Jesters used"),
+        Line::from("  Silver Victory: 1 Jester used"),
+        Line::from("  Bronze Victory: 2 Jesters used"),
+        Line::from(""),
+        Line::from(Span::styled(
+            "DEFEAT CONDITIONS:",
+            Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
+        )),
+        Line::from("  Cannot discard enough cards to survive enemy attack"),
+        Line::from("  Cannot play a card or yield on your turn"),
+        Line::from(""),
+        Line::from(Span::styled(
+            "HAND MANAGEMENT:",
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        )),
+        Line::from("  Maximum hand size varies by player count:"),
+        Line::from("    - Solo: 8 cards"),
+        Line::from("    - 2 players: 7 cards each"),
+        Line::from("    - 3 players: 6 cards each"),
+        Line::from("    - 4 players: 5 cards each"),
+        Line::from(""),
+        Line::from(Span::styled(
+            "DECK STRUCTURE:",
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        )),
+        Line::from(Span::styled(
+            "Castle Deck (Enemies):",
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
+        )),
+        Line::from("  Layered construction:"),
+        Line::from("    - Bottom: 4 Kings (suits randomized)"),
+        Line::from("    - Middle: 4 Queens (suits randomized)"),
+        Line::from("    - Top: 4 Jacks (suits randomized)"),
+        Line::from("  Top card is always the current enemy"),
+        Line::from(""),
+        Line::from(Span::styled(
+            "Tavern Deck (Player Deck):",
+            Style::default()
+                .fg(Color::Green)
+                .add_modifier(Modifier::BOLD),
+        )),
+        Line::from("  Standard 52-card deck (Ace-10 only, face cards removed)"),
+        Line::from("  Jester count by player count:"),
+        Line::from("    - Solo: 2 Jesters"),
+        Line::from("    - 2 players: 1 Jester"),
+        Line::from("    - 3 players: 0 Jesters"),
+        Line::from("    - 4 players: 0 Jesters"),
+        Line::from(""),
+        Line::from(Span::styled(
+            "Press 'h' to close this guide",
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
+        )),
+    ];
 
-    let paragraph = Paragraph::new(text).block(block).wrap(Wrap { trim: true });
+    // Create a centered area (larger than before to show more content)
+    let area = centered_rect(80, 90, f.area());
 
-    // Create a centered area
-    let area = centered_rect(60, 70, f.area());
+    // Calculate how many lines can fit (subtract 2 for borders)
+    let available_height = area.height.saturating_sub(2) as usize;
+    let total_lines = all_lines.len();
+    let start_idx = scroll_offset.min(total_lines.saturating_sub(available_height));
+    let end_idx = (start_idx + available_height).min(total_lines);
+
+    let visible_lines: Vec<Line> = all_lines[start_idx..end_idx].to_vec();
+
+    let paragraph = Paragraph::new(Text::from(visible_lines))
+        .block(block)
+        .alignment(Alignment::Left);
+
     f.render_widget(paragraph, area);
 }
 
@@ -729,4 +982,9 @@ fn render_game_guide(f: &mut Frame, area: Rect, scroll_offset: usize) {
 /// Get the total number of lines in the game guide (for scrolling)
 pub fn get_game_guide_line_count() -> usize {
     64 // Total lines in the game guide
+}
+
+/// Get the total number of lines in the help overlay (for scrolling)
+pub fn get_help_line_count() -> usize {
+    177 // Total lines in the help overlay
 }
