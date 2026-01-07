@@ -195,14 +195,14 @@ fn render_castle(f: &mut Frame, area: Rect, game: &Game) {
 
 /// Render the Battlefield pane (played cards, shields, damage)
 fn render_battlefield(f: &mut Frame, area: Rect, game: &Game, action_prompt: &str) {
-    // Split battlefield into played cards area, stats area, and action prompt
+    // Split battlefield into stats rows, battlefield, and action prompt
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
             Constraint::Length(4), // Deck stats row (castle/discard/tavern)
             Constraint::Length(4), // Combat stats row (shield/damage) - same size as deck stats
-            Constraint::Min(5),    // Played cards area - takes remaining space
-            Constraint::Length(5), // Action prompt frame
+            Constraint::Min(8),    // Battlefield area - takes remaining space
+            Constraint::Length(7), // Action prompt frame - increased padding
         ])
         .split(area);
 
@@ -300,7 +300,7 @@ fn render_battlefield(f: &mut Frame, area: Rect, game: &Game, action_prompt: &st
     .alignment(Alignment::Center);
     f.render_widget(damage_text, combat_row[1]);
 
-    // Render played cards area (takes remaining space)
+    // Render battlefield area (takes remaining space)
     let played_block = Block::default()
         .title("⚡ The Battlefield ⚡")
         .borders(Borders::ALL)
@@ -337,99 +337,7 @@ fn render_battlefield(f: &mut Frame, area: Rect, game: &Game, action_prompt: &st
 
     f.render_widget(played_paragraph, chunks[2]);
 
-    // Top row: 3 panels for decks
-    let deck_row = Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([
-            Constraint::Percentage(33), // Castle Deck
-            Constraint::Percentage(34), // Discard Pile
-            Constraint::Percentage(33), // Tavern Deck
-        ])
-        .split(stats_chunks[0]);
-
-    // Render Castle Deck
-    let castle_deck_block = Block::default()
-        .title("Castle")
-        .borders(Borders::ALL)
-        .border_style(Style::default().fg(Color::Yellow));
-    let castle_deck_text = Paragraph::new(Span::styled(
-        format!("{} enemies", game.castle_deck.len()),
-        Style::default()
-            .fg(Color::Yellow)
-            .add_modifier(Modifier::BOLD),
-    ))
-    .block(castle_deck_block)
-    .alignment(Alignment::Center);
-    f.render_widget(castle_deck_text, deck_row[0]);
-
-    // Render Discard Pile
-    let discard_block = Block::default()
-        .title("Discard")
-        .borders(Borders::ALL)
-        .border_style(Style::default().fg(Color::Gray));
-    let discard_text = Paragraph::new(Span::styled(
-        format!("{} cards", game.discard_pile.len()),
-        Style::default()
-            .fg(Color::Gray)
-            .add_modifier(Modifier::BOLD),
-    ))
-    .block(discard_block)
-    .alignment(Alignment::Center);
-    f.render_widget(discard_text, deck_row[1]);
-
-    // Render Tavern Deck
-    let tavern_block = Block::default()
-        .title("Tavern")
-        .borders(Borders::ALL)
-        .border_style(Style::default().fg(Color::Green));
-    let tavern_text = Paragraph::new(Span::styled(
-        format!("{} cards", game.tavern_deck.len()),
-        Style::default()
-            .fg(Color::Green)
-            .add_modifier(Modifier::BOLD),
-    ))
-    .block(tavern_block)
-    .alignment(Alignment::Center);
-    f.render_widget(tavern_text, deck_row[2]);
-
-    // Bottom row: 2 panels for combat stats
-    let combat_row = Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([
-            Constraint::Percentage(50), // Active Shield
-            Constraint::Percentage(50), // Total Damage
-        ])
-        .split(stats_chunks[1]);
-
-    // Render Active Shield
-    let shield_block = Block::default()
-        .title("🛡 Shield")
-        .borders(Borders::ALL)
-        .border_style(Style::default().fg(Color::Blue));
-    let shield_text = Paragraph::new(Span::styled(
-        format!("{}", game.shield_value),
-        Style::default()
-            .fg(Color::Blue)
-            .add_modifier(Modifier::BOLD),
-    ))
-    .block(shield_block)
-    .alignment(Alignment::Center);
-    f.render_widget(shield_text, combat_row[0]);
-
-    // Render Total Damage
-    let damage_block = Block::default()
-        .title("⚔ Damage")
-        .borders(Borders::ALL)
-        .border_style(Style::default().fg(Color::Red));
-    let damage_text = Paragraph::new(Span::styled(
-        format!("{}", game.total_damage),
-        Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
-    ))
-    .block(damage_block)
-    .alignment(Alignment::Center);
-    f.render_widget(damage_text, combat_row[1]);
-
-    // Render action prompt at bottom with padding
+    // Render action prompt at bottom with increased padding
     let prompt_block = Block::default()
         .title("⚡ Next Action ⚡")
         .borders(Borders::ALL)
@@ -443,13 +351,14 @@ fn render_battlefield(f: &mut Frame, area: Rect, game: &Game, action_prompt: &st
                 .fg(Color::Yellow)
                 .add_modifier(Modifier::BOLD),
         )),
+        Line::from(""),
     ];
 
     let prompt_text = Paragraph::new(Text::from(prompt_lines))
         .block(prompt_block)
         .alignment(Alignment::Center);
 
-    f.render_widget(prompt_text, chunks[2]);
+    f.render_widget(prompt_text, chunks[3]);
 }
 
 /// Render the Hand pane (player's cards)
