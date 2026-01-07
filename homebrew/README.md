@@ -6,11 +6,12 @@ This directory contains the Homebrew formula for installing Kingslayer via Homeb
 
 To make this formula available via `brew tap`, you need to create a separate repository called `homebrew-kingslayer`.
 
-### Steps:
+### Steps
 
 1. **Create a new GitHub repository** named `homebrew-kingslayer` (the name must start with `homebrew-`)
 
 2. **Copy the formula** to the tap repository:
+
    ```bash
    # In your homebrew-kingslayer repository
    mkdir -p Formula
@@ -18,6 +19,7 @@ To make this formula available via `brew tap`, you need to create a separate rep
    ```
 
 3. **Update SHA256 hashes** after creating a release:
+
    ```bash
    # Download the release artifacts
    # For each platform, calculate the SHA256:
@@ -29,6 +31,7 @@ To make this formula available via `brew tap`, you need to create a separate rep
    ```
 
 4. **Commit and push** the formula to the tap repository:
+
    ```bash
    git add Formula/kingslayer.rb
    git commit -m "Add kingslayer formula v0.1.0"
@@ -36,6 +39,7 @@ To make this formula available via `brew tap`, you need to create a separate rep
    ```
 
 5. **Users can now install** with:
+
    ```bash
    brew tap str4nge-m4g1c/kingslayer
    brew install kingslayer
@@ -57,7 +61,7 @@ When you release a new version:
 You can use `brew bump-formula-pr` to automatically update the formula:
 
 ```bash
-brew bump-formula-pr --url=https://github.com/str4nge-m4g1c/regicide-tui/archive/v0.2.0.tar.gz kingslayer
+brew bump-formula-pr --url=https://github.com/str4nge-m4g1c/kingslayer/archive/v0.2.0.tar.gz kingslayer
 ```
 
 ## Testing the Formula
