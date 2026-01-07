@@ -17,19 +17,6 @@ Regicide is a cooperative card game where players work together to defeat 12 pow
 
 ## Installation
 
-### Homebrew (macOS/Linux)
-
-```bash
-# Add the tap
-brew tap str4nge-m4g1c/kingslayer
-
-# Install kingslayer
-brew install kingslayer
-
-# Run the game
-kingslayer
-```
-
 ### From Release Binaries
 
 Download the latest release for your platform from the [Releases page](https://github.com/str4nge-m4g1c/regicide-tui/releases):
@@ -75,9 +62,6 @@ cargo install --path .
 ### Running the Game
 
 ```bash
-# If installed via Homebrew or in PATH
-kingslayer
-
 # Or run directly with cargo
 cargo run --release
 
