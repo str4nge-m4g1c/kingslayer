@@ -468,10 +468,12 @@ fn render_log(f: &mut Frame, area: Rect, game: &Game, scroll_offset: usize) {
     let available_height = area.height.saturating_sub(2) as usize;
     let max_items = available_height.min(100);
 
-    // Get log items with scroll offset
+    // Get log items with scroll offset from bottom
+    // scroll_offset = 0 means show the newest messages
+    // scroll_offset > 0 means scroll back in history
     let total_logs = game.game_log.len();
-    let start_idx = scroll_offset.min(total_logs.saturating_sub(max_items));
-    let end_idx = (start_idx + max_items).min(total_logs);
+    let end_idx = total_logs.saturating_sub(scroll_offset);
+    let start_idx = end_idx.saturating_sub(max_items);
 
     let log_items: Vec<ListItem> = game.game_log[start_idx..end_idx]
         .iter()

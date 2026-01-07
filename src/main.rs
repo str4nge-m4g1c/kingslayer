@@ -44,22 +44,23 @@ impl App {
     }
 
     fn scroll_log_up(&mut self) {
-        if self.log_scroll_offset > 0 {
-            self.log_scroll_offset -= 1;
-        }
-    }
-
-    fn scroll_log_down(&mut self) {
-        let max_scroll = self.game.game_log.len().saturating_sub(10);
+        // Scroll up = go back in history (increment offset from bottom)
+        let max_scroll = self.game.game_log.len();
         if self.log_scroll_offset < max_scroll {
             self.log_scroll_offset += 1;
         }
     }
 
+    fn scroll_log_down(&mut self) {
+        // Scroll down = go forward in history (decrement offset from bottom)
+        if self.log_scroll_offset > 0 {
+            self.log_scroll_offset -= 1;
+        }
+    }
+
     fn reset_log_scroll(&mut self) {
-        // Auto-scroll to bottom (latest logs)
-        let total_logs = self.game.game_log.len();
-        self.log_scroll_offset = total_logs.saturating_sub(1);
+        // Auto-scroll to bottom (latest logs) = offset 0 from bottom
+        self.log_scroll_offset = 0;
     }
 
     fn scroll_guide_up(&mut self) {
