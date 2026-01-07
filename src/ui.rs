@@ -292,9 +292,7 @@ fn render_battlefield(f: &mut Frame, area: Rect, game: &Game, action_prompt: &st
         .border_style(Style::default().fg(Color::Red));
     let damage_text = Paragraph::new(Span::styled(
         format!("{}", game.total_damage),
-        Style::default()
-            .fg(Color::Red)
-            .add_modifier(Modifier::BOLD),
+        Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
     ))
     .block(damage_block)
     .alignment(Alignment::Center);

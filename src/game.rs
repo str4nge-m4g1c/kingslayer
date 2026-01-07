@@ -138,7 +138,9 @@ impl Game {
 
         let first_rank = cards[0].rank;
         if !cards.iter().all(|c| c.rank == first_rank) {
-            return Err("Combo cards must all have the same rank (or use Ace + 1 card)".to_string());
+            return Err(
+                "Combo cards must all have the same rank (or use Ace + 1 card)".to_string(),
+            );
         }
 
         let total: u8 = cards.iter().map(|c| c.value()).sum();
@@ -176,7 +178,7 @@ impl Game {
         }
 
         // Store current enemy for comparison
-        let enemy_before = self.current_enemy.as_ref().map(|e| e.card.clone());
+        let enemy_before = self.current_enemy.as_ref().map(|e| e.card);
 
         // Log the play
         let card_names: Vec<String> = cards.iter().map(|c| c.display()).collect();
@@ -196,7 +198,7 @@ impl Game {
         self.deal_damage(attack_value)?;
 
         // Check if enemy was defeated (new enemy appeared)
-        let enemy_defeated = enemy_before != self.current_enemy.as_ref().map(|e| e.card.clone());
+        let enemy_defeated = enemy_before != self.current_enemy.as_ref().map(|e| e.card);
 
         Ok(enemy_defeated)
     }

@@ -222,7 +222,9 @@ impl App {
             }
             AppState::Victory => "Press 'r' to Restart or 'q' to Quit".to_string(),
             AppState::Defeat => "Press 'r' to Restart or 'q' to Quit".to_string(),
-            AppState::RestartConfirmation => "Restart game? Press 'y' to confirm or 'n' to cancel".to_string(),
+            AppState::RestartConfirmation => {
+                "Restart game? Press 'y' to confirm or 'n' to cancel".to_string()
+            }
         }
     }
 }
@@ -269,7 +271,14 @@ fn run_app<B: ratatui::backend::Backend>(
             }
 
             let action_prompt = app.get_action_prompt();
-            ui::render_game(f, &app.game, &app.selected_cards, app.log_scroll_offset, app.guide_scroll_offset, &action_prompt);
+            ui::render_game(
+                f,
+                &app.game,
+                &app.selected_cards,
+                app.log_scroll_offset,
+                app.guide_scroll_offset,
+                &action_prompt,
+            );
         })?;
 
         if let Event::Key(key) = event::read()? {
@@ -348,12 +357,11 @@ fn run_app<B: ratatui::backend::Backend>(
                     }
                     _ => {}
                 },
-                AppState::Victory | AppState::Defeat => match key.code {
-                    KeyCode::Char('r') => {
+                AppState::Victory | AppState::Defeat => {
+                    if key.code == KeyCode::Char('r') {
                         app.restart_game();
                     }
-                    _ => {}
-                },
+                }
                 AppState::RestartConfirmation => match key.code {
                     KeyCode::Char('y') | KeyCode::Char('Y') => {
                         app.restart_game();
