@@ -5,7 +5,7 @@ use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span, Text},
-    widgets::{Block, Borders, List, ListItem, Paragraph},
+    widgets::{Block, BorderType, Borders, List, ListItem, Paragraph},
     Frame,
 };
 
@@ -335,28 +335,42 @@ fn render_battlefield(f: &mut Frame, area: Rect, game: &Game, action_prompt: &st
 
     f.render_widget(played_paragraph, chunks[2]);
 
-    // Render action prompt at bottom with increased padding
+    // Render action prompt at bottom with colored double-line border
+    // Determine border color based on action type
+    let border_color = if action_prompt.contains("ATTACK") {
+        Color::Red
+    } else if action_prompt.contains("DEFEND") {
+        Color::Blue
+    } else {
+        Color::Yellow
+    };
+
+    // Clean up the text by removing emoji icons
+    let text = action_prompt
+        .replace("⚔️  ", "")
+        .replace("🛡️  ", "");
+
     let prompt_block = Block::default()
         .title("⚡ Next Action ⚡")
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(Color::Yellow));
+        .border_type(BorderType::Double)
+        .border_style(Style::default().fg(border_color));
 
-    let prompt_lines = vec![
+    // Render text with padding
+    let text_lines = vec![
         Line::from(""),
         Line::from(Span::styled(
-            action_prompt,
+            text,
             Style::default()
                 .fg(Color::Yellow)
                 .add_modifier(Modifier::BOLD),
         )),
-        Line::from(""),
     ];
-
-    let prompt_text = Paragraph::new(Text::from(prompt_lines))
+    let text_paragraph = Paragraph::new(Text::from(text_lines))
         .block(prompt_block)
-        .alignment(Alignment::Center);
-
-    f.render_widget(prompt_text, chunks[3]);
+        .alignment(Alignment::Center)
+        .wrap(ratatui::widgets::Wrap { trim: true });
+    f.render_widget(text_paragraph, chunks[3]);
 }
 
 /// Render the Hand pane (player's cards)

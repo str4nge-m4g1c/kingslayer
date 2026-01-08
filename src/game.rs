@@ -218,11 +218,12 @@ impl Game {
         // Apply suit powers (Step 2)
         self.apply_suit_powers(&cards, attack_value)?;
 
+        // Store played cards BEFORE dealing damage
+        // This ensures they're included if enemy is defeated
+        self.played_cards.extend(cards.clone());
+
         // Deal damage (Step 3) - pass cards to check for Clubs in THIS turn only
         self.deal_damage(attack_value, &cards)?;
-
-        // Store played cards AFTER dealing damage
-        self.played_cards.extend(cards);
 
         // Check if enemy was defeated (new enemy appeared)
         let enemy_defeated = enemy_before != self.current_enemy.as_ref().map(|e| e.card);
@@ -929,7 +930,7 @@ mod tests {
         game.player.hand.clear();
         game.player.hand.push(Card::new(Suit::Hearts, Rank::Ace)); // 1
         game.player.hand.push(Card::new(Suit::Diamonds, Rank::Ace)); // 1
-        let tavern_before = game.tavern_deck.len();
+        let _tavern_before = game.tavern_deck.len();
         let discard_before = game.discard_pile.len();
 
         let result = game.play_cards(vec![0, 1]);
