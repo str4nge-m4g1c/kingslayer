@@ -24,8 +24,9 @@ pub struct Game {
     pub total_damage: u8, // Total damage dealt to current enemy
     pub game_state: GameState,
     pub game_log: Vec<String>,
-    pub jester_count: u8, // For solo mode
-    pub jesters_used: u8, // For solo mode
+    pub jester_count: u8,         // For solo mode
+    pub jesters_used: u8,         // For solo mode
+    pub jester_played_this_turn: bool, // Track if Jester was played to skip Step 4
 }
 
 impl Game {
@@ -53,6 +54,7 @@ impl Game {
             game_log: Vec::new(),
             jester_count: 2,
             jesters_used: 0,
+            jester_played_this_turn: false,
         };
 
         // Reveal first enemy
@@ -154,6 +156,9 @@ impl Game {
     /// Play cards from hand (Step 1 & 2)
     /// Returns true if enemy was defeated (and a new one appeared)
     pub fn play_cards(&mut self, card_indices: Vec<usize>) -> Result<bool, String> {
+        // Reset Jester flag at the start of a new turn
+        self.jester_played_this_turn = false;
+
         // Validate the play
         self.validate_play(&card_indices)?;
 
@@ -173,7 +178,8 @@ impl Game {
                 enemy.cancel_immunity();
             }
             self.discard_pile.extend(cards);
-            // Jester skips to choosing next player (in solo, continue)
+            // Jester skips Steps 3 and 4 (dealt damage and suffer damage)
+            self.jester_played_this_turn = true;
             return Ok(false);
         }
 
@@ -366,6 +372,8 @@ impl Game {
 
     /// Yield turn (skip to enemy attack)
     pub fn yield_turn(&mut self) -> Result<(), String> {
+        // Reset Jester flag at the start of a new turn
+        self.jester_played_this_turn = false;
         self.log("Yielded turn");
         Ok(())
     }
@@ -434,5 +442,76 @@ impl Game {
         ));
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::card::{Card, Rank, Suit};
+
+    #[test]
+    fn test_jester_skips_step_4() {
+        // Test that playing a Jester sets the flag to skip enemy attack
+        let mut game = Game::new_solo();
+
+        // Add a Jester to the player's hand
+        let jester = Card::new(Suit::Hearts, Rank::Jester);
+        game.player.hand.clear();
+        game.player.hand.push(jester);
+
+        // Play the Jester
+        let result = game.play_cards(vec![0]);
+
+        // Should succeed and not defeat enemy
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), false); // enemy not defeated
+
+        // Jester flag should be set to skip Step 4
+        assert_eq!(game.jester_played_this_turn, true);
+
+        // Immunity should be cancelled
+        assert_eq!(game.current_enemy.as_ref().unwrap().immunity_cancelled, true);
+    }
+
+    #[test]
+    fn test_jester_flag_resets_on_next_turn() {
+        // Test that the Jester flag resets when a new turn starts
+        let mut game = Game::new_solo();
+
+        // Manually set the flag
+        game.jester_played_this_turn = true;
+
+        // Add a card to hand
+        let card = Card::new(Suit::Hearts, Rank::Five);
+        game.player.hand.clear();
+        game.player.hand.push(card);
+
+        // Play a normal card
+        let result = game.play_cards(vec![0]);
+
+        // Should succeed
+        assert!(result.is_ok());
+
+        // Jester flag should be reset to false
+        assert_eq!(game.jester_played_this_turn, false);
+    }
+
+    #[test]
+    fn test_jester_flag_resets_on_yield() {
+        // Test that the Jester flag resets when yielding
+        let mut game = Game::new_solo();
+
+        // Manually set the flag
+        game.jester_played_this_turn = true;
+
+        // Yield turn
+        let result = game.yield_turn();
+
+        // Should succeed
+        assert!(result.is_ok());
+
+        // Jester flag should be reset to false
+        assert_eq!(game.jester_played_this_turn, false);
     }
 }

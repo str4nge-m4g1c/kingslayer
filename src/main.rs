@@ -140,9 +140,10 @@ impl App {
                     _ => {}
                 }
 
-                // Only enemy attacks if no enemy was defeated
+                // Only enemy attacks if no enemy was defeated AND Jester was not played
                 // (If enemy was defeated, new enemy appears and waits for player's turn)
-                if !enemy_defeated {
+                // (If Jester was played, skip Step 4 per rules)
+                if !enemy_defeated && !self.game.jester_played_this_turn {
                     // Transition to discard phase (enemy attack)
                     if let Ok(damage) = self.game.enemy_attack() {
                         self.reset_log_scroll();
