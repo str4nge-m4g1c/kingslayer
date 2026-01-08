@@ -218,11 +218,11 @@ impl Game {
         // Apply suit powers (Step 2)
         self.apply_suit_powers(&cards, attack_value)?;
 
-        // Store played cards
-        self.played_cards.extend(cards);
+        // Deal damage (Step 3) - pass cards to check for Clubs in THIS turn only
+        self.deal_damage(attack_value, &cards)?;
 
-        // Deal damage (Step 3)
-        self.deal_damage(attack_value)?;
+        // Store played cards AFTER dealing damage
+        self.played_cards.extend(cards);
 
         // Check if enemy was defeated (new enemy appeared)
         let enemy_defeated = enemy_before != self.current_enemy.as_ref().map(|e| e.card);
@@ -339,12 +339,11 @@ impl Game {
     }
 
     /// Deal damage to the enemy (Step 3)
-    fn deal_damage(&mut self, mut attack_value: u8) -> Result<(), String> {
+    fn deal_damage(&mut self, mut attack_value: u8, cards: &[Card]) -> Result<(), String> {
         let enemy = self.current_enemy.as_mut().ok_or("No current enemy")?;
 
-        // Check if clubs were played (check in played_cards for this turn)
-        let clubs_played = self
-            .played_cards
+        // Check if clubs were played in THIS turn only (not previous turns)
+        let clubs_played = cards
             .iter()
             .any(|c| c.suit == Suit::Clubs && !enemy.is_immune_to(Suit::Clubs));
 
@@ -624,6 +623,57 @@ mod tests {
         assert_eq!(
             enemy_attack, 5,
             "Enemy attack should be 5 (10 - 5 shield)"
+        );
+    }
+
+    #[test]
+    fn test_clubs_power_does_not_persist() {
+        // Test that Clubs double damage only applies to the turn it's played
+        let mut game = Game::new_solo();
+
+        // Ensure enemy is NOT Clubs (to avoid immunity blocking the test)
+        // Replace enemy with Jack of Hearts for predictable testing
+        game.current_enemy = Some(Enemy::new(Card::new(Suit::Hearts, Rank::Jack)));
+
+        // Setup: Give player 5 of Clubs and 5 of Hearts
+        game.player.hand.clear();
+        game.player.hand.push(Card::new(Suit::Clubs, Rank::Five));
+        game.player.hand.push(Card::new(Suit::Hearts, Rank::Five));
+
+        // Turn 1: Play 5 of Clubs -> should deal 10 damage (5 doubled)
+        let result = game.play_cards(vec![0]);
+        assert!(result.is_ok());
+        assert_eq!(game.total_damage, 10, "Clubs should double damage to 10"); // 5 * 2 = 10
+
+        // Turn 2: Play 5 of Hearts -> should deal 5 damage (NOT doubled)
+        let result = game.play_cards(vec![0]);
+        assert!(result.is_ok());
+        assert_eq!(
+            game.total_damage, 15,
+            "Second turn should NOT benefit from Clubs doubling (10 + 5 = 15)"
+        ); // 10 + 5 = 15 (NOT 10 + 10 = 20)
+    }
+
+    #[test]
+    fn test_clubs_combo_doubles_total_damage() {
+        // Test that Clubs in a combo doubles the TOTAL combo damage
+        let mut game = Game::new_solo();
+
+        // Ensure enemy is NOT Clubs
+        game.current_enemy = Some(Enemy::new(Card::new(Suit::Hearts, Rank::Jack)));
+
+        // Setup: Give player 3♣, 3♥, 3♦ for a combo (total 9 <= 10)
+        game.player.hand.clear();
+        game.player.hand.push(Card::new(Suit::Clubs, Rank::Three));
+        game.player.hand.push(Card::new(Suit::Hearts, Rank::Three));
+        game.player.hand.push(Card::new(Suit::Diamonds, Rank::Three));
+
+        // Play combo: 3♣ + 3♥ + 3♦ = 9 attack, doubled to 18 due to Clubs
+        let result = game.play_cards(vec![0, 1, 2]);
+        assert!(result.is_ok(), "Combo should be valid");
+        assert_eq!(
+            game.total_damage, 18,
+            "Clubs in combo should double total damage: (3+3+3)*2 = 18"
         );
     }
 }
